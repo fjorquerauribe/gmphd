@@ -91,7 +91,6 @@ class Truth:
                 target_state = target_state[0,:]
                 self.track_list[k] = np.append(self.track_list[k], [target_num])
                 self.N[k]+=1
-
         self.total_tracks = nbirths
 
 class Measurement:
@@ -102,8 +101,10 @@ class Measurement:
         # Generate measurements
         for k in xrange(self.K):
             if truth.N[k] > 0:
-                idx, idy = np.where( np.random.rand(truth.N[k], 1) <= model.P_D ) # detected target indices
-                #print idx
+                (idx, _) = np.where( np.random.rand(truth.N[k], 1) <= model.P_D ) # detected target indices
+                if not(self.Z[k].size):
+                    self.Z[k].shape = (0, model.z_dim)
+                self.Z[k] = gen_observation_fn(model, truth.X[k][idx,:], 'noise') # single target observations if detected
 
 
 def gen_newstate_fn(model, Xd, V):
@@ -116,6 +117,17 @@ def gen_newstate_fn(model, Xd, V):
     else:
         X = np.matmul(model.F, Xd.T) + V.T
     return X
+
+def gen_observation_fn(model, X, W):
+    if W == 'noise':
+        W = np.matmul(model.D, np.random.rand(model.D.shape[1], X.shape[0]))
+    elif W == 'noiseless':
+        W = np.zeros((model.D.shape[0]), 1)
+    if not(X.size):
+        Z = np.array([[]])
+    else:
+        Z = np.matmul(model.H, X.T) + W
+    return Z.T
 
 if __name__== '__main__':
     model = Model()
